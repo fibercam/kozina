@@ -46,20 +46,45 @@ nav a {
   border-radius: 5px;
 }
 
-.features {
-  background: white;
-  padding: 40px 20px;
+.services {
+  background: #fff;
+  padding: 50px 20px;
   text-align: center;
 }
 
-.features ul {
-  list-style: none;
-  padding: 0;
+.service-boxes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-.features li {
-  font-size: 18px;
-  margin: 10px 0;
+.box {
+  background: #f1f1f1;
+  margin: 10px;
+  padding: 20px;
+  width: 250px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.portfolio {
+  background: #fafafa;
+  padding: 50px 20px;
+  text-align: center;
+}
+
+.gallery {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.gallery img {
+  margin: 10px;
+  width: 250px;
+  height: auto;
+  border-radius: 5px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .form-section {
@@ -84,26 +109,6 @@ form button {
   border: none;
   cursor: pointer;
   margin-top: 10px;
-}
-
-.portfolio {
-  background: #fafafa;
-  padding: 50px 20px;
-  text-align: center;
-}
-
-.gallery {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.gallery img {
-  margin: 10px;
-  width: 250px;
-  height: auto;
-  border-radius: 5px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 footer {
