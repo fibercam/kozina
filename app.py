@@ -13,14 +13,13 @@ def index():
 
 @app.route('/remove-bg', methods=['POST'])
 def remove_bg():
-    data = request.get_json()
-    image_data = data.get('image')
-
-    if not image_data:
-        return jsonify({'error': 'No image provided'}), 400
-
     try:
-        # Remove "data:image/jpeg;base64,..."
+        data = request.get_json()
+        image_data = data.get('image')
+
+        if not image_data:
+            return jsonify({'error': 'No image provided'}), 400
+
         if ',' in image_data:
             image_base64 = image_data.split(',')[1]
         else:
@@ -28,7 +27,6 @@ def remove_bg():
 
         image_bytes = base64.b64decode(image_base64)
 
-        # Send to remove.bg API
         response = requests.post(
             'https://api.remove.bg/v1.0/removebg',
             headers={'X-Api-Key': REMOVE_BG_API_KEY},
@@ -40,7 +38,7 @@ def remove_bg():
             result_b64 = "data:image/png;base64," + base64.b64encode(response.content).decode()
             return jsonify({'result': result_b64})
         else:
-            return jsonify({'error': 'Remove.bg API error', 'details': response.text}), 500
+            return jsonify({'error': 'Remove.bg API failed', 'details': response.text}), 500
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
