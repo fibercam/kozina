@@ -1,10 +1,8 @@
-from flask import Flask, render_template_string
+from flask import Flask, render_template
 
 app = Flask(__name__)
 
-with open("index.htm", "r", encoding="utf-8") as f:
-    index_html = f.read()
-
 @app.route("/")
 def home():
-    return render_template_string(index_html)
+    return render_template("index.html")
+
