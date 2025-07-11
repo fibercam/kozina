@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>360° Photo Capture with BG Removal</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #121212; color: #fff; margin: 0; padding: 0; }
+  .container { max-width: 900px; margin: auto; padding: 20px; text-align: center; }
+  video { width: 100%; max-width: 600px; border-radius: 10px; background: #000; }
+  button { margin: 10px; padding: 10px 20px; font-size: 1rem; border: none; border-radius: 5px; cursor: pointer; }
+  #imageViewer { width: 600px; height: 400px; margin: 20px auto; background: #222; background-size: cover; border-radius: 10px; cursor: grab; }
+  #imageViewer:active { cursor: grabbing; }
+  .photos-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; }
+  .photos-grid img { width: 80px; height: 80px; object-fit: contain; border-radius: 5px; border: 2px solid #555; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📸 360° Photo Capture with Background Removal</h1>
+  <video id="video" autoplay muted playsinline></video>
+  <div>
+    <button id="startCamera">Start Camera</button>
+    <button id="capture" disabled>Capture & Remove BG</button>
+  </div>
+  <p id="statusText">Camera not started</p>
+  <p>Photos captured: <span id="count">0</span></p>
+
+  <div class="photos-grid" id="thumbnails"></div>
+
+  <div id="imageViewer">Capture photos to see 360° view</div>
+</div>
+
+<script>
+  const startBtn = document.getElementById('startCamera');
+  const captureBtn = document.getElementById('capture');
+  const video = document.getElementById('video');
+  const thumbnails = document.getElementById('thumbnails');
+  const statusText = document.getElementById('statusText');
+  const countDisplay = document.getElementById('count');
+  const viewer = document.getElementById('imageViewer');
+
+  const photos = [];
+  let currentFrame = 0;
+  let stream = null;
+
+  startBtn.onclick = async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      video.srcObject = stream;
+      statusText.textContent = "Camera started";
+      captureBtn.disabled = false;
+    } catch (err) {
+      console.error(err);
+      statusText.textContent = "Failed to access camera";
+    }
+  };
+
+  captureBtn.onclick = async () => {
+    statusText.textContent = "Capturing photo...";
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg');
+
+    statusText.textContent = "Removing background...";
+    try {
+      const response = await fetch('/remove-bg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+      const result = await response.json();
+
+      if (result.result) {
+        photos.push(result.result);
+        updateThumbnails();
+        updateViewer();
+        statusText.textContent = "Background removed, photo added.";
+      } else {
+        statusText.textContent = "Error removing background: " + (result.error || 'Unknown error');
+      }
+    } catch (err) {
+      statusText.textContent = "Request failed: " + err.message;
+    }
+  };
+
+  function updateThumbnails() {
+    thumbnails.innerHTML = '';
+    photos.forEach((src, index) => {
+      const img = document.createElement('img');
+      img.src = src;
+      img.title = `Photo ${index + 1}`;
+      img.onclick = () => {
+        currentFrame = index;
+        updateViewer();
+      };
+      thumbnails.appendChild(img);
+    });
+    countDisplay.textContent = photos.length;
+  }
+
+  function updateViewer() {
+    if (photos.length > 0) {
+      viewer.style.backgroundImage = `url(${photos[currentFrame]})`;
+    } else {
+      viewer.style.backgroundImage = '';
+      viewer.textContent = "Capture photos to see 360° view";
+    }
+  }
+
+  // 360° viewer drag support
+  viewer.addEventListener('mousedown', e => {
+    viewer.style.cursor = 'grabbing';
+    let startX = e.clientX;
+    const move = e => {
+      const dx = e.clientX - startX;
+      if (Math.abs(dx) > 20) {
+        currentFrame = (currentFrame + (dx > 0 ? 1 : -1) + photos.length) % photos.length;
+        updateViewer();
+        startX = e.clientX;
+      }
+    };
+    const up = () => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      viewer.style.cursor = 'grab';
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  });
+
+</script>
+</body>
+</html>
