@@ -1,11 +1,11 @@
 from flask import Flask, request, jsonify, send_from_directory
 import requests
 import base64
-import os
+import io
 
 app = Flask(__name__, static_folder='static')
 
-REMOVE_BG_API_KEY = "UnCRQ1Sxa5UhadPa7MFKZBDQ"
+REMOVE_BG_API_KEY = "UnCRQ1Sxa5UhadPa7MFKZBDQ"  # Replace with your real key
 
 @app.route('/')
 def index():
@@ -19,26 +19,28 @@ def remove_bg():
     if not image_data:
         return jsonify({'error': 'No image provided'}), 400
 
-    # Extract base64 data
-    if ',' in image_data:
-        image_base64 = image_data.split(',')[1]
-    else:
-        image_base64 = image_data
-
     try:
+        # Remove "data:image/jpeg;base64,..."
+        if ',' in image_data:
+            image_base64 = image_data.split(',')[1]
+        else:
+            image_base64 = image_data
+
         image_bytes = base64.b64decode(image_base64)
+
+        # Send to remove.bg API
+        response = requests.post(
+            'https://api.remove.bg/v1.0/removebg',
+            headers={'X-Api-Key': REMOVE_BG_API_KEY},
+            files={'image_file': ('image.jpg', io.BytesIO(image_bytes), 'image/jpeg')},
+            data={'size': 'auto'}
+        )
+
+        if response.status_code == 200:
+            result_b64 = "data:image/png;base64," + base64.b64encode(response.content).decode()
+            return jsonify({'result': result_b64})
+        else:
+            return jsonify({'error': 'Remove.bg API error', 'details': response.text}), 500
+
     except Exception as e:
-        return jsonify({'error': 'Invalid image format'}), 400
-
-    response = requests.post(
-        'https://api.remove.bg/v1.0/removebg',
-        headers={'X-Api-Key': REMOVE_BG_API_KEY},
-        files={'image_file': ('image.jpg', image_bytes)},
-        data={'size': 'auto'}
-    )
-
-    if response.status_code == requests.codes.ok:
-        result_b64 = "data:image/png;base64," + base64.b64encode(response.content).decode()
-        return jsonify({'result': result_b64})
-    else:
-        return jsonify({'error': 'Remove.bg API error', 'message': response.text}), 500
+        return jsonify({'error': str(e)}), 500
