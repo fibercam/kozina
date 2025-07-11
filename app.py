@@ -2,10 +2,11 @@ from flask import Flask, request, jsonify, send_from_directory
 import requests
 import base64
 import io
+import os
 
 app = Flask(__name__, static_folder='static')
 
-REMOVE_BG_API_KEY = "UnCRQ1Sxa5UhadPa7MFKZBDQ"  # Replace with your real key
+REMOVE_BG_API_KEY = "UnCRQ1Sxa5UhadPa7MFKZBDQ"
 
 @app.route('/')
 def index():
@@ -13,32 +14,25 @@ def index():
 
 @app.route('/remove-bg', methods=['POST'])
 def remove_bg():
-    try:
-        data = request.get_json()
-        image_data = data.get('image')
+    data = request.get_json()
+    image_data = data.get('image')
+    if not image_data:
+        return jsonify({'error': 'No image provided'}), 400
 
-        if not image_data:
-            return jsonify({'error': 'No image provided'}), 400
+    # Extract base64 part
+    image_base64 = image_data.split(',')[1] if ',' in image_data else image_data
+    image_bytes = base64.b64decode(image_base64)
 
-        if ',' in image_data:
-            image_base64 = image_data.split(',')[1]
-        else:
-            image_base64 = image_data
+    # Send to remove.bg using a file-like object
+    response = requests.post(
+        'https://api.remove.bg/v1.0/removebg',
+        headers={'X-Api-Key': REMOVE_BG_API_KEY},
+        files={'image_file': ('image.jpg', io.BytesIO(image_bytes), 'image/jpeg')},
+        data={'size': 'auto'},
+    )
 
-        image_bytes = base64.b64decode(image_base64)
-
-        response = requests.post(
-            'https://api.remove.bg/v1.0/removebg',
-            headers={'X-Api-Key': REMOVE_BG_API_KEY},
-            files={'image_file': ('image.jpg', io.BytesIO(image_bytes), 'image/jpeg')},
-            data={'size': 'auto'}
-        )
-
-        if response.status_code == 200:
-            result_b64 = "data:image/png;base64," + base64.b64encode(response.content).decode()
-            return jsonify({'result': result_b64})
-        else:
-            return jsonify({'error': 'Remove.bg API failed', 'details': response.text}), 500
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    if response.status_code == 200:
+        result_b64 = "data:image/png;base64," + base64.b64encode(response.content).decode()
+        return jsonify({'result': result_b64})
+    else:
+        return jsonify({'error': 'Remove.bg API error', 'message': response.text}), 500
